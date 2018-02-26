@@ -9,8 +9,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/minodisk/resizer/fetcher"
-	"github.com/minodisk/resizer/testutil"
+	"github.com/syoya/resizer/fetcher"
+	"github.com/syoya/resizer/testutil"
 )
 
 var (

@@ -10,9 +10,9 @@ import (
 
 	opt "google.golang.org/api/option"
 
-	"github.com/minodisk/resizer/options"
-	"github.com/minodisk/resizer/storage"
 	"github.com/pkg/errors"
+	"github.com/syoya/resizer/options"
+	"github.com/syoya/resizer/storage"
 	"golang.org/x/net/context"
 )
 

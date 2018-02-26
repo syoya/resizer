@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/minodisk/resizer/options"
+	"github.com/syoya/resizer/options"
 )
 
 func TestOptions(t *testing.T) {

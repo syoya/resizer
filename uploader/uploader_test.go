@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/minodisk/resizer/options"
-	"github.com/minodisk/resizer/storage"
-	"github.com/minodisk/resizer/uploader"
+	"github.com/syoya/resizer/options"
+	"github.com/syoya/resizer/storage"
+	"github.com/syoya/resizer/uploader"
 )
 
 var u *uploader.Uploader

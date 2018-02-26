@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/minodisk/resizer/options"
-	"github.com/minodisk/resizer/server"
+	"github.com/syoya/resizer/options"
+	"github.com/syoya/resizer/server"
 )
 
 func main() {

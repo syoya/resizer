@@ -3,7 +3,7 @@ package options_test
 import (
 	"testing"
 
-	"github.com/minodisk/resizer/options"
+	"github.com/syoya/resizer/options"
 )
 
 func TestAccountString(t *testing.T) {

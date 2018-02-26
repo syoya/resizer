@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/minodisk/resizer/options"
-	"github.com/minodisk/resizer/server"
-	"github.com/minodisk/resizer/testutil"
 	"github.com/pkg/errors"
+	"github.com/syoya/resizer/options"
+	"github.com/syoya/resizer/server"
+	"github.com/syoya/resizer/testutil"
 )
 
 var (

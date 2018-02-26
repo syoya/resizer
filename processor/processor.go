@@ -16,10 +16,10 @@ import (
 	"sync"
 
 	"github.com/minodisk/orientation"
-	"github.com/minodisk/resizer/input"
-	"github.com/minodisk/resizer/storage"
 	"github.com/nfnt/resize"
 	"github.com/pkg/errors"
+	"github.com/syoya/resizer/input"
+	"github.com/syoya/resizer/storage"
 )
 
 var (
