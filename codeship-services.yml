@@ -4,13 +4,19 @@ services:
 
   resizer:
     build: .
-    links:
+    depends_on:
       - mysql
     encrypted_env_file: secret.env.encrypted
+    enviroment:
+      RESIZER_BUCKET: 'wakka-master'
+      RESIZER_DSN: 'root:@tcp(mysql:3306)/resizer?charset=utf8&parseTime=True'
+      RESIZER_HOST:  'master.wakka.io'
+      RESIZER_PORT: '7000'
+      RESIZER_PREFIX: 'resized/'
     command: sh test.sh
 
   mysql:
-    image: mysql:5.6
+    image: mysql:5.7
     environment:
       MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
       MYSQL_DATABASE: 'resizer'
