@@ -1,5 +1,6 @@
-# resizer [ ![Codeship Status for syoya/resizer](https://img.shields.io/codeship/13aaf0c0-0354-0135-03f6-4ebd009726c2/master.svg?style=flat)](https://app.codeship.com/projects/213308) [![Go Report Card](https://goreportcard.com/badge/github.com/syoya/resizer)](https://goreportcard.com/report/github.com/syoya/resizer) [![codecov](https://codecov.io/gh/syoya/resizer/branch/master/graph/badge.svg)](https://codecov.io/gh/syoya/resizer) [![GoDoc](https://img.shields.io/badge/godoc-reference-5272B4.svg?style=flat)](https://godoc.org/github.com/syoya/resizer) [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
+# resizer
 
+[ ![Codeship Status for syoya/resizer](https://app.codeship.com/projects/92195530-f76b-0134-35bd-0ae7ee10c8ce/status?branch=master)](https://app.codeship.com/projects/210709) [![Go Report Card](https://goreportcard.com/badge/github.com/syoya/resizer)](https://goreportcard.com/report/github.com/syoya/resizer) [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
 
 ## Specification
 
