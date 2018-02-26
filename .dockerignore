@@ -1,1 +1,12 @@
-.git*
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+
+# Credential
+*.env
+*.aes
+*.dockercfg
+service_account.json
