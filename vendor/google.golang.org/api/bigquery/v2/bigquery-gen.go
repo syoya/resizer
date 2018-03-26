@@ -2068,6 +2068,10 @@ type JobStatistics2 struct {
 	// TotalBytesProcessed: [Output-only] Total bytes processed for the job.
 	TotalBytesProcessed int64 `json:"totalBytesProcessed,omitempty,string"`
 
+	// TotalPartitionsProcessed: [Output-only] Total number of partitions
+	// processed from all partitioned tables referenced in the job.
+	TotalPartitionsProcessed int64 `json:"totalPartitionsProcessed,omitempty,string"`
+
 	// TotalSlotMs: [Output-only] Slot-milliseconds for the job.
 	TotalSlotMs int64 `json:"totalSlotMs,omitempty,string"`
 
@@ -5155,10 +5159,26 @@ func (c *JobsListCall) AllUsers(allUsers bool) *JobsListCall {
 	return c
 }
 
+// MaxCreationTime sets the optional parameter "maxCreationTime": Max
+// value for job creation time, in milliseconds since the POSIX epoch.
+// If set, only jobs created before or at this timestamp are returned
+func (c *JobsListCall) MaxCreationTime(maxCreationTime uint64) *JobsListCall {
+	c.urlParams_.Set("maxCreationTime", fmt.Sprint(maxCreationTime))
+	return c
+}
+
 // MaxResults sets the optional parameter "maxResults": Maximum number
 // of results to return
 func (c *JobsListCall) MaxResults(maxResults int64) *JobsListCall {
 	c.urlParams_.Set("maxResults", fmt.Sprint(maxResults))
+	return c
+}
+
+// MinCreationTime sets the optional parameter "minCreationTime": Min
+// value for job creation time, in milliseconds since the POSIX epoch.
+// If set, only jobs created after or at this timestamp are returned
+func (c *JobsListCall) MinCreationTime(minCreationTime uint64) *JobsListCall {
+	c.urlParams_.Set("minCreationTime", fmt.Sprint(minCreationTime))
 	return c
 }
 
@@ -5298,11 +5318,23 @@ func (c *JobsListCall) Do(opts ...googleapi.CallOption) (*JobList, error) {
 	//       "location": "query",
 	//       "type": "boolean"
 	//     },
+	//     "maxCreationTime": {
+	//       "description": "Max value for job creation time, in milliseconds since the POSIX epoch. If set, only jobs created before or at this timestamp are returned",
+	//       "format": "uint64",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
 	//     "maxResults": {
 	//       "description": "Maximum number of results to return",
 	//       "format": "uint32",
 	//       "location": "query",
 	//       "type": "integer"
+	//     },
+	//     "minCreationTime": {
+	//       "description": "Min value for job creation time, in milliseconds since the POSIX epoch. If set, only jobs created after or at this timestamp are returned",
+	//       "format": "uint64",
+	//       "location": "query",
+	//       "type": "string"
 	//     },
 	//     "pageToken": {
 	//       "description": "Page token, returned by a previous call, to request the next page of results",
