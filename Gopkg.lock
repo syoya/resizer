@@ -50,6 +50,12 @@
   version = "v2.0.0"
 
 [[projects]]
+  name = "github.com/hnakamur/zap-ltsv"
+  packages = ["."]
+  revision = "dc7450951c52b749e2e18933c95ba13f448b3f65"
+  version = "v0.2"
+
+[[projects]]
   name = "github.com/jinzhu/gorm"
   packages = ["."]
   revision = "6ed508ec6a4ecb3531899a69cbc746ccf65a4166"
@@ -111,6 +117,31 @@
   ]
   revision = "6e3f034057826b530038d93267906ec3c012183f"
   version = "v0.6.0"
+
+[[projects]]
+  name = "go.uber.org/atomic"
+  packages = ["."]
+  revision = "8474b86a5a6f79c443ce4b2992817ff32cf208b8"
+  version = "v1.3.1"
+
+[[projects]]
+  name = "go.uber.org/multierr"
+  packages = ["."]
+  revision = "3c4937480c32f4c13a875a1829af76c98ca3d40a"
+  version = "v1.1.0"
+
+[[projects]]
+  name = "go.uber.org/zap"
+  packages = [
+    ".",
+    "buffer",
+    "internal/bufferpool",
+    "internal/color",
+    "internal/exit",
+    "zapcore"
+  ]
+  revision = "35aad584952c3e7020db7b839f6b102de6271f89"
+  version = "v1.7.1"
 
 [[projects]]
   branch = "master"
@@ -238,6 +269,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2d6d6c02bb105d9770a5af7eba2a72b6197bbf2e69e5f34b930a064c41d03999"
+  inputs-digest = "4870da5499293d395fe8b364019334a9ea3b90d7efa0bc8d0e540ff225cb9256"
   solver-name = "gps-cdcl"
   solver-version = 1
