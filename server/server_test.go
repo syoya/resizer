@@ -28,9 +28,6 @@ func TestMain(m *testing.M) {
 	if err := testutil.CreateGoogleAuthFile(); err != nil {
 		panic(err)
 	}
-	if err := testutil.DownloadFixtures("f-png24.png"); err != nil {
-		panic(err)
-	}
 
 	fixturesServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(testutil.DirFixtures, r.URL.Path[1:]))
@@ -58,9 +55,6 @@ func TestMain(m *testing.M) {
 	fixturesServer.Close()
 
 	if err := testutil.RemoveGoogleAuthFile(); err != nil {
-		panic(err)
-	}
-	if err := testutil.RemoveFixtures(); err != nil {
 		panic(err)
 	}
 

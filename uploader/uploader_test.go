@@ -6,27 +6,43 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/syoya/resizer/options"
 	"github.com/syoya/resizer/storage"
+	"github.com/syoya/resizer/testutil"
 	"github.com/syoya/resizer/uploader"
 )
 
-var u *uploader.Uploader
-
-func TestNew(t *testing.T) {
-	var err error
-	o := &options.Options{
-		Bucket: "resizer",
+var (
+	u    *uploader.Uploader
+	opts = &options.Options{
+		Bucket: "test-syoya-resizer",
 		ServiceAccount: options.ServiceAccount{
 			Path: "/secret/google-auth.json",
 		},
 	}
-	if err != nil {
-		t.Fatalf("fail to create options: %v", err)
+)
+
+func TestMain(m *testing.M) {
+	if err := testutil.CreateGoogleAuthFile(); err != nil {
+		panic(err)
 	}
-	u, err = uploader.New(o)
+
+	var err error
+	u, err = uploader.New(opts)
+	if err != nil {
+		panic(err)
+	}
+
+	c := m.Run()
+
+	os.Exit(c)
+}
+
+func TestNew(t *testing.T) {
+	_, err := uploader.New(opts)
 	if err != nil {
 		t.Fatalf("fail to new: %v", err)
 	}
@@ -72,7 +88,7 @@ func TestUpload(t *testing.T) {
 }
 
 func TestCreateURL(t *testing.T) {
-	expected := "https://resizer.storage.googleapis.com/baz"
+	expected := "https://test-syoya-resizer.storage.googleapis.com/baz"
 	actual := u.CreateURL("baz")
 	if actual != expected {
 		t.Errorf("fail to create URL: expected %s, but actual %s", expected, actual)

@@ -2,39 +2,37 @@ package processor_test
 
 import (
 	"bytes"
-	"fmt"
 	"image"
 	"math"
-	"os"
 	"testing"
 
 	"github.com/syoya/resizer/input"
 	"github.com/syoya/resizer/processor"
 	"github.com/syoya/resizer/storage"
-	"github.com/syoya/resizer/testutil"
 )
 
 const (
-	u   = 3
-	png = "fixtures/f-png24.png"
+	u                        = 3
+	png                      = "../fixtures/f-png24.png"
+	maxEuclideanDistanceRGBA = 131070 // math.Sqrt(math.Pow(0xff, 2) * 4)
 )
 
 var (
 	formats = []string{
-		"fixtures/f.jpg",
-		"fixtures/f-png8.png",
-		"fixtures/f-png24.png",
-		"fixtures/f.gif",
+		"../fixtures/f.jpg",
+		"../fixtures/f-png8.png",
+		"../fixtures/f-png24.png",
+		"../fixtures/f.gif",
 	}
 	orientations = []string{
-		"fixtures/f-orientation-1.jpg",
-		"fixtures/f-orientation-2.jpg",
-		"fixtures/f-orientation-3.jpg",
-		"fixtures/f-orientation-4.jpg",
-		"fixtures/f-orientation-5.jpg",
-		"fixtures/f-orientation-6.jpg",
-		"fixtures/f-orientation-7.jpg",
-		"fixtures/f-orientation-8.jpg",
+		"../fixtures/f-orientation-1.jpg",
+		"../fixtures/f-orientation-2.jpg",
+		"../fixtures/f-orientation-3.jpg",
+		"../fixtures/f-orientation-4.jpg",
+		"../fixtures/f-orientation-5.jpg",
+		"../fixtures/f-orientation-6.jpg",
+		"../fixtures/f-orientation-7.jpg",
+		"../fixtures/f-orientation-8.jpg",
 	}
 	raw = []int{
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -54,32 +52,6 @@ var (
 	}
 )
 
-func TestMain(m *testing.M) {
-	if err := testutil.DownloadFixtures(
-		"f-png24.png",
-		"f.jpg",
-		"f-png8.png",
-		"f-png24.png",
-		"f.gif",
-		"f-orientation-1.jpg",
-		"f-orientation-2.jpg",
-		"f-orientation-3.jpg",
-		"f-orientation-4.jpg",
-		"f-orientation-5.jpg",
-		"f-orientation-6.jpg",
-		"f-orientation-7.jpg",
-		"f-orientation-8.jpg",
-	); err != nil {
-		panic(err)
-	}
-
-	code := m.Run()
-	if err := testutil.RemoveFixtures(); err != nil {
-		fmt.Println(err)
-	}
-	os.Exit(code)
-}
-
 func diff(a, b uint32) uint32 {
 	if a > b {
 		return a - b
@@ -91,7 +63,16 @@ func isNear(a, b uint32) bool {
 	return diff(a, b) <= math.MaxUint8*4
 }
 
-func evalPixels(t *testing.T, i image.Image, p image.Point, colors []int) {
+// calcEuclideanDistance 2つのピクセルのRGBAからユークリッド距離を求める
+func calcEuclideanDistance(r1, g1, b1, a1, r2, b2, g2, a2 uint32) float64 {
+	r := math.Pow((float64(r1)/float64(0xffff))-(float64(r2)/float64(0xffff)), 2)
+	g := math.Pow((float64(g1)/float64(0xffff))-(float64(g2)/float64(0xffff)), 2)
+	b := math.Pow((float64(b1)/float64(0xffff))-(float64(b2)/float64(0xffff)), 2)
+	a := math.Pow((float64(a1)/float64(0xffff))-(float64(a2)/float64(0xffff)), 2)
+	return math.Sqrt(r + g + b + a)
+}
+
+func evalPixels(t *testing.T, path string, i image.Image, p image.Point, colors []int) {
 	for y := 0; y < p.Y; y++ {
 		for x := 0; x < p.X; x++ {
 			var er, eg, eb, ea uint32
@@ -101,21 +82,24 @@ func evalPixels(t *testing.T, i image.Image, p image.Point, colors []int) {
 				eg = 0xffff
 				eb = 0xffff
 			} else {
-				er = 0
-				eg = 0
-				eb = 0
+				er = 0x00
+				eg = 0x00
+				eb = 0x00
 			}
 			ea = 0xffff
 
 			a := i.At(u/2>>0+u*x, u/2>>0+u*y)
 			ar, ag, ab, aa := a.RGBA()
 
-			if !(isNear(er, ar) && isNear(eg, ag) && isNear(eb, ab) && isNear(ea, aa)) {
+			// 距離が0.3を超える場合は近似色とはしない
+			if distance := calcEuclideanDistance(er, eg, eb, ea, ar, ag, ab, aa); distance > 0.3 {
 				t.Errorf(
-					"wrong color at (%d, %d) expected {%d, %d, %d, %d}, but actual {%d, %d, %d, %d}",
+					"wrong color at (%d, %d) expected {%d, %d, %d, %d}, but actual {%d, %d, %d, %d}, distance=%v, path=%s",
 					x, y,
 					er, eg, eb, ea,
 					ar, ag, ab, aa,
+					distance,
+					path,
 				)
 			}
 		}
@@ -130,35 +114,32 @@ func eval(t *testing.T, path string, f storage.Image, size image.Point, colors [
 	f.ValidatedHeight *= u
 	pixels, err := p.Preprocess(path)
 	if err != nil {
-		t.Fatal("cannot preprocess image", err)
+		t.Fatalf("cannot preprocess image: err=%v, path=%s", err, path)
 	}
 
 	f, err = f.Normalize(pixels.Bounds().Size())
 	if err != nil {
-		t.Fatal("fail to normalize", err)
+		t.Fatalf("fail to normalize: err=%v, path=%s", err, path)
 	}
 
 	if _, err := p.Resize(pixels, w, f); err != nil {
-		t.Fatal("cannot process image", err)
-		return ""
+		t.Fatalf("cannot process image: err=%v path=%s", err, path)
 	}
 
 	r := bytes.NewReader(w.Bytes())
 	img, format, err := image.Decode(r)
 	if err != nil {
-		t.Fatalf("cannot decode image: %v", err)
-		return ""
+		t.Fatalf("cannot decode image: err=%v, path=%s", err, path)
 	}
 
 	expectedSize := size.Mul(u)
 	rect := img.Bounds()
 	actualSize := rect.Size()
 	if !actualSize.Eq(expectedSize) {
-		t.Fatalf("wrong size expected %v, but actual %v", expectedSize, actualSize)
-		return ""
+		t.Fatalf("wrong size expected %v, but actual %v, path=%s", expectedSize, actualSize, path)
 	}
 
-	evalPixels(t, img, size, colors)
+	evalPixels(t, path, img, size, colors)
 
 	return format
 }

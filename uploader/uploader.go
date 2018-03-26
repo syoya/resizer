@@ -7,13 +7,11 @@ import (
 	"log"
 
 	gcs "cloud.google.com/go/storage"
-
-	opt "google.golang.org/api/option"
-
 	"github.com/pkg/errors"
 	"github.com/syoya/resizer/options"
 	"github.com/syoya/resizer/storage"
 	"golang.org/x/net/context"
+	opt "google.golang.org/api/option"
 )
 
 const (
