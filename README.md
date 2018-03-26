@@ -25,13 +25,16 @@ resizer
 
 ### Environment variables
 
-- `ENVIRONMENT`: `development` or `production`. In default `production`
-- `GC_PROJECT_ID`: The project ID of Google Cloud.
-- `GC_STORAGE_BUCKET`: The bucket name of Google Cloud Storage.
-- `GC_SERVICE_ACCOUNT`: The base64-encoded service account JSON of Google Cloud.
-- `MYSQL_DATA_SOURCE_NAME`: The data source name of MySQL.
-- `ALLOWED_HOSTS`: The allowed hosts of resizing images. Specified with a string joined by `,`. When unspecified, resizer will resize images in any host.
-- `MAX_HTTP_CONNECTIONS`
+- ``ENVIRONMENT``: ``development`` or ``production``. In default ``production``
+- ``GOOGLE_AUTH_JSON``: The service account JSON of Google Cloud.
+- ``RESIZER_ACCOUNT``: Path to the file of Google service account JSON.
+- ``RESIZER_BUCKET``: Bucket name of Google Cloud Storage to upload the resized image.
+- ``RESIZER_CONNECTIONS``: Max simultaneous connections to be accepted by server. When 0 or less is specified, the number of connections isn't limited.
+- ``RESIZER_DSN``: Data source name of database to store resizing information.
+- ``RESIZER_HOST``: Hosts of the image that is allowed to resize. When this value isn't specified, all hosts are allowed.
+- ``RESIZER_PORT``: Port to be listened.
+- ``RESIZER_PREFIX``: Object prefix of Google Cloud Storage.
+- ``RESIZER_VERBOSE``: Verbose output.
 
 ## HTTP(S) API
 
