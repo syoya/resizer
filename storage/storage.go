@@ -2,7 +2,6 @@ package storage
 
 import (
 	"log"
-	"os"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -10,12 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/syoya/resizer/options"
 )
-
-type Logger struct{}
-
-func (l Logger) Print(values ...interface{}) {
-	log.Println(values...)
-}
 
 type Storage struct {
 	*gorm.DB
@@ -33,9 +26,9 @@ func New(o *options.Options) (*Storage, error) {
 		time.Sleep(time.Second)
 	}
 	db.LogMode(false)
-	// db.LogMode(true)
-	// db.SetLogger(&Logger{})
-	if os.Getenv("ENVIRONMENT") == "development" {
+	if o.Enviroment == "development" {
+		// db.LogMode(true)
+		// db.SetLogger(&Logger{})
 		db.DropTable(&Image{})
 	}
 	db.CreateTable(&Image{})

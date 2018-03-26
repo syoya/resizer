@@ -31,7 +31,8 @@ func TestOptions(t *testing.T) {
 					"a.com",
 					"b.com",
 				},
-				Port: 80,
+				Port:       80,
+				Enviroment: "production",
 			},
 		},
 		{
@@ -46,7 +47,8 @@ func TestOptions(t *testing.T) {
 					"a.com",
 					"b.com",
 				},
-				Port: 80,
+				Port:       80,
+				Enviroment: "production",
 			},
 		},
 		{
@@ -62,7 +64,8 @@ func TestOptions(t *testing.T) {
 					"b.com",
 					"c.com",
 				},
-				Port: 80,
+				Port:       80,
+				Enviroment: "production",
 			},
 		},
 		{
@@ -72,8 +75,9 @@ func TestOptions(t *testing.T) {
 			},
 			[]string{},
 			&options.Options{
-				Bucket: "foo",
-				Port:   80,
+				Bucket:     "foo",
+				Port:       80,
+				Enviroment: "production",
 			},
 		},
 		{
@@ -83,8 +87,9 @@ func TestOptions(t *testing.T) {
 				"-bucket", "bar",
 			},
 			&options.Options{
-				Bucket: "bar",
-				Port:   80,
+				Bucket:     "bar",
+				Port:       80,
+				Enviroment: "production",
 			},
 		},
 		{
@@ -96,8 +101,9 @@ func TestOptions(t *testing.T) {
 				"-bucket", "bar",
 			},
 			&options.Options{
-				Bucket: "bar",
-				Port:   80,
+				Bucket:     "bar",
+				Port:       80,
+				Enviroment: "production",
 			},
 		},
 	} {
