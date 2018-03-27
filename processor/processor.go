@@ -19,17 +19,23 @@ import (
 	"github.com/nfnt/resize"
 	"github.com/pkg/errors"
 	"github.com/syoya/resizer/input"
+	"github.com/syoya/resizer/options"
 	"github.com/syoya/resizer/storage"
+	"go.uber.org/zap"
 )
 
 var (
 	mutex sync.Mutex
 )
 
-type Processor struct{}
+type Processor struct {
+	l *zap.Logger
+}
 
-func New() *Processor {
-	return &Processor{}
+func NewProcessor(o *options.Options) *Processor {
+	return &Processor{
+		l: o.Logger,
+	}
 }
 
 func (p *Processor) Process(path string, w io.Writer, f storage.Image) (*image.Point, error) {
