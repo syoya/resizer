@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/minodisk/resizer/options"
-	"github.com/minodisk/resizer/server"
-	"github.com/minodisk/resizer/testutil"
 	"github.com/pkg/errors"
+	"github.com/syoya/resizer/options"
+	"github.com/syoya/resizer/server"
+	"github.com/syoya/resizer/testutil"
 )
 
 var (
@@ -26,9 +26,6 @@ var (
 
 func TestMain(m *testing.M) {
 	if err := testutil.CreateGoogleAuthFile(); err != nil {
-		panic(err)
-	}
-	if err := testutil.DownloadFixtures("f-png24.png"); err != nil {
 		panic(err)
 	}
 
@@ -58,9 +55,6 @@ func TestMain(m *testing.M) {
 	fixturesServer.Close()
 
 	if err := testutil.RemoveGoogleAuthFile(); err != nil {
-		panic(err)
-	}
-	if err := testutil.RemoveFixtures(); err != nil {
 		panic(err)
 	}
 

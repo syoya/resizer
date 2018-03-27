@@ -7,8 +7,8 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
-	"github.com/minodisk/resizer/options"
 	"github.com/pkg/errors"
+	"github.com/syoya/resizer/options"
 )
 
 type Logger struct{}

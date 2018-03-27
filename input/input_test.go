@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/minodisk/resizer/input"
+	"github.com/syoya/resizer/input"
 )
 
 func TestValidateURL(t *testing.T) {

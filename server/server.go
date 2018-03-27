@@ -12,13 +12,13 @@ import (
 	"time"
 
 	"github.com/alecthomas/template"
-	"github.com/minodisk/resizer/fetcher"
-	"github.com/minodisk/resizer/input"
-	"github.com/minodisk/resizer/options"
-	"github.com/minodisk/resizer/processor"
-	"github.com/minodisk/resizer/storage"
-	"github.com/minodisk/resizer/uploader"
 	"github.com/pkg/errors"
+	"github.com/syoya/resizer/fetcher"
+	"github.com/syoya/resizer/input"
+	"github.com/syoya/resizer/options"
+	"github.com/syoya/resizer/processor"
+	"github.com/syoya/resizer/storage"
+	"github.com/syoya/resizer/uploader"
 	"golang.org/x/net/netutil"
 )
 

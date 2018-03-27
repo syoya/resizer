@@ -10,9 +10,9 @@ import (
 	"math"
 	"time"
 
-	"github.com/minodisk/resizer/input"
-	"github.com/minodisk/resizer/options"
 	uuid "github.com/satori/go.uuid"
+	"github.com/syoya/resizer/input"
+	"github.com/syoya/resizer/options"
 )
 
 type Image struct {

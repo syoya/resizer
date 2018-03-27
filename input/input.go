@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/minodisk/resizer/options"
+	"github.com/syoya/resizer/options"
 )
 
 const (

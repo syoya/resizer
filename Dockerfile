@@ -1,10 +1,10 @@
-FROM golang:1.8.1
+FROM golang:1.10.0
 
-WORKDIR /go/src/github.com/minodisk/resizer
+WORKDIR /go/src/github.com/syoya/resizer
 
-RUN go get -u \
-      github.com/golang/dep/...
 COPY . .
-RUN go install .
+
+RUN go get -u github.com/golang/dep/... && \
+  go install .
 
 CMD resizer

@@ -9,8 +9,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/minodisk/resizer/fetcher"
-	"github.com/minodisk/resizer/testutil"
+	"github.com/syoya/resizer/fetcher"
+	"github.com/syoya/resizer/testutil"
 )
 
 var (
@@ -18,19 +18,11 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	if err := testutil.DownloadFixtures("f-png24.png"); err != nil {
-		panic(err)
-	}
-
 	mockServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, testutil.DirFixtures)
 	}))
 
-	code := m.Run()
-	if err := testutil.RemoveFixtures(); err != nil {
-		fmt.Println(err)
-	}
-	os.Exit(code)
+	os.Exit(m.Run())
 }
 
 func TestFetchAndClean(t *testing.T) {

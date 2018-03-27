@@ -18,6 +18,8 @@ _test
 *.aes
 *.env
 google-auth.json
+*.dockercfg
+service_account.json
 
 # Binaries
 *.jpg

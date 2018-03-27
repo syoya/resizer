@@ -3,9 +3,9 @@ package processor_test
 import (
 	"testing"
 
-	"github.com/minodisk/resizer/input"
-	"github.com/minodisk/resizer/processor"
-	"github.com/minodisk/resizer/storage"
+	"github.com/syoya/resizer/input"
+	"github.com/syoya/resizer/processor"
+	"github.com/syoya/resizer/storage"
 )
 
 type NopWriter struct{}
