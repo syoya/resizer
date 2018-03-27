@@ -128,42 +128,78 @@ func NewHandler(o *options.Options) (Handler, error) {
 	}, nil
 }
 
+// logHTTPRequest HTTP Requestをロギングする
+// この場合はクライアントから受信したデータ
+func logHTTPRequest(l *zap.Logger, r *http.Request, requestID string) {
+	l.Named(logger.TagKeyHTTPRequest).Info(
+		"クライアントから受信した情報一覧",
+		zap.String(logger.FieldKeyRequestID, requestID),
+		zap.String(logger.FieldKeyHTTPMethod, r.Method),
+		zap.String(logger.FieldKeyURL, r.URL.String()),
+		zap.String(logger.FieldKeyHTTPProtocol, r.Proto),
+		zap.String(logger.FieldKeyHost, r.Header.Get("X-Forwarded-Host")),
+		zap.String(logger.FieldKeyUserAgent, r.Header.Get("User-Agent")),
+		zap.String(logger.FieldKeyContentType, r.Header.Get("Content-Type")),
+	)
+}
+
+// logHTTPResponse HTTP Responseをロギングする
+// この場合はクライアントへ送信するデータ
+func logHTTPResponse(l *zap.Logger, w http.ResponseWriter, statusCode int, requestID string) {
+	l.Named(logger.TagKeyHTTPResponse).Info(
+		"クライアントへ送信する情報一覧",
+		zap.String(logger.FieldKeyRequestID, requestID),
+		zap.String(logger.FieldKeyHTTPStatus, http.StatusText(statusCode)),
+		zap.Int(logger.FieldKeyHTTPStatusCode, statusCode),
+	)
+}
+
 // ServeHTTP はリクエストに応じて処理を行いレスポンスする。
 func (h *Handler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	l := h.Options.Logger.Named(logger.TagKeyHandlerServeHTTP)
-	if err := h.operate(resp, req); err != nil {
-		l.Error("fail to operate", zap.Error(err))
-		resp.WriteHeader(http.StatusBadRequest)
 
-		e := NewErrorHTML(http.StatusBadRequest, errors.Cause(err).Error())
+	requestID := req.Header.Get("X-Request-ID")
+
+	logHTTPRequest(h.Options.Logger, req, requestID)
+
+	statusCode, err := h.operate(resp, req)
+	if err != nil {
+		l.Error("failed to operate", zap.Error(err))
+		resp.WriteHeader(statusCode)
+
+		e := NewErrorHTML(statusCode, errors.Cause(err).Error())
 		err := errorHTMLTemplate.Execute(resp, e)
 		if err != nil {
-			l.Error("fail to generate error html from template", zap.Error(err))
+			l.Error("failed to generate error html from template", zap.Error(err))
 		}
 
 		return
 	}
 
 	l.Debug("OK")
+	logHTTPResponse(h.Options.Logger, resp, statusCode, requestID)
 }
 
 // operate は手続き的に一連のリサイズ処理を行う。
 // エラーを画一的に扱うためにメソッドとして切り分けを行っている
-func (h *Handler) operate(resp http.ResponseWriter, req *http.Request) error {
+// 返り値
+// - HTTP Status Code
+// - error
+func (h *Handler) operate(resp http.ResponseWriter, req *http.Request) (int, error) {
 	l := h.Options.Logger.Named(logger.TagKeyHandlerOperate)
 
 	// 1. URLクエリからリクエストされているオプションを抽出する
 	input, err := input.New(req.URL.Query())
 	if err != nil {
-		return err
+		return http.StatusBadRequest, err
 	}
 	input, err = input.Validate(h.Options.AllowedHosts)
 	if err != nil {
-		return err
+		return http.StatusBadRequest, err
 	}
 	i, err := storage.NewImage(input)
 	if err != nil {
-		return err
+		return http.StatusBadRequest, err
 	}
 
 	// 3. バリデート済みオプションでリサイズをしたキャッシュがあるか調べる
@@ -185,8 +221,9 @@ func (h *Handler) operate(resp http.ResponseWriter, req *http.Request) error {
 			zap.Object(logger.FieldKeyCacheImageObject, cache),
 		)
 		url := h.Uploader.CreateURL(cache.Filename)
-		http.Redirect(resp, req, url, http.StatusFound)
-		return nil
+		statusCode := http.StatusFound
+		http.Redirect(resp, req, url, statusCode)
+		return statusCode, nil
 	}
 
 	l.Info(
@@ -211,14 +248,14 @@ func (h *Handler) operate(resp http.ResponseWriter, req *http.Request) error {
 		}
 	}()
 	if err != nil {
-		return err
+		return http.StatusBadRequest, err
 	}
 	var b []byte
 	buf := bytes.NewBuffer(b)
 	p := processor.NewProcessor(h.Options)
 	pixels, err := p.Preprocess(filename)
 	if err != nil {
-		return err
+		return http.StatusBadRequest, err
 	}
 
 	// 7. 正規化する
@@ -226,7 +263,7 @@ func (h *Handler) operate(resp http.ResponseWriter, req *http.Request) error {
 	// 9. あればリサイズ画像のURLにリダイレクトする
 	i, err = i.Normalize(pixels.Bounds().Size())
 	if err != nil {
-		return err
+		return http.StatusBadRequest, err
 	}
 	cache = storage.Image{}
 	h.Storage.Where(&storage.Image{
@@ -243,8 +280,9 @@ func (h *Handler) operate(resp http.ResponseWriter, req *http.Request) error {
 			zap.Object(logger.FieldKeyCacheImageObject, cache),
 		)
 		url := h.Uploader.CreateURL(cache.Filename)
-		http.Redirect(resp, req, url, http.StatusFound)
-		return nil
+		statusCode := http.StatusFound
+		http.Redirect(resp, req, url, statusCode)
+		return statusCode, nil
 	}
 	l.Info(
 		"normalized cache doesn't exist",
@@ -256,7 +294,7 @@ func (h *Handler) operate(resp http.ResponseWriter, req *http.Request) error {
 	// 12. レスポンスする
 	size, err := p.Resize(pixels, buf, i)
 	if err != nil {
-		return err
+		return http.StatusBadRequest, err
 	}
 	b = buf.Bytes()
 
@@ -272,7 +310,7 @@ func (h *Handler) operate(resp http.ResponseWriter, req *http.Request) error {
 	// レスポンスを完了させるために非同期に処理する
 	go h.save(b, i)
 
-	return nil
+	return http.StatusOK, nil
 }
 
 // save はファイルやデータを保存します。

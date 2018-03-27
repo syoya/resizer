@@ -28,6 +28,13 @@ const (
 	FieldKeyUpdatedAt      = "updated_at"
 	FieldKeySizeBytes      = "size_bytes"
 	FieldKeyBucket         = "bucket"
+	FieldKeyHTTPMethod     = "http_method"
+	FieldKeyHTTPProtocol   = "http_protocol"
+	FieldKeyHost           = "host"
+	FieldKeyUserAgent      = "user_agent"
+	FieldKeyHTTPBody       = "http_body"
+	FieldKeyHTTPStatus     = "http_status"
+	FieldKeyRequestID      = "request_id"
 
 	FieldKeyImageObject           = "image_object"
 	FieldKeyImageValidatedURL     = "image_validated_url"

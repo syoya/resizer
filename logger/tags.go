@@ -18,4 +18,6 @@ const (
 	TagKeyFetcherUploader      = "UPLOADER"
 	TagKeyUploaderUpload       = "UPLOAD"
 	TagKeyFetcherProcessor     = "PROCESSOR"
+	TagKeyHTTPRequest          = "HTTP_REQUEST"
+	TagKeyHTTPResponse         = "HTTP_RESPONSE"
 )
