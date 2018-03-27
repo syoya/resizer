@@ -20,6 +20,12 @@ func main() {
 	// 環境変数からオプションを生成する
 	o, err := options.NewOptions(os.Args[1:])
 	checkErr(err)
+	defer func() {
+		err = o.Logger.Sync()
+		if err != nil {
+			o = nil
+		}
+	}()
 
 	// サーバ始動
 	o.Logger.Named(logger.TagKeyServerStart).Info(

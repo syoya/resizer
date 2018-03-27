@@ -88,8 +88,9 @@ type Options struct {
 
 // NewOptions Initialize Options
 // - args command line arguments
-func NewOptions(args []string) (o *Options, err error) {
-	o = &Options{}
+func NewOptions(args []string) (*Options, error) {
+	var err error
+	o := &Options{}
 	err = o.parse(args)
 	if err != nil {
 		return nil, err
@@ -109,12 +110,6 @@ func NewOptions(args []string) (o *Options, err error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		err = zapLogger.Sync()
-		if err != nil {
-			o = nil
-		}
-	}()
 	o.Logger = zapLogger
 
 	return o, nil
