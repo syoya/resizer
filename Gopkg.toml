@@ -59,3 +59,11 @@
 [[constraint]]
   branch = "master"
   name = "google.golang.org/api"
+
+[[constraint]]
+  name = "go.uber.org/zap"
+  version = "^1.7.1"
+
+[[constraint]]
+  name = "github.com/hnakamur/zap-ltsv"
+  version = "^0.2.0"

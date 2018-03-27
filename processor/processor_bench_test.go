@@ -4,8 +4,10 @@ import (
 	"testing"
 
 	"github.com/syoya/resizer/input"
+	"github.com/syoya/resizer/options"
 	"github.com/syoya/resizer/processor"
 	"github.com/syoya/resizer/storage"
+	"go.uber.org/zap"
 )
 
 type NopWriter struct{}
@@ -15,12 +17,17 @@ func (w NopWriter) Write(p []byte) (n int, err error) {
 }
 
 func process(path string) error {
-	p := processor.New()
+	testZapLogger, err := zap.NewDevelopment()
+	if err != nil {
+		return err
+	}
+
+	p := processor.NewProcessor(&options.Options{Logger: testZapLogger})
 	input := input.Input{
 		URL:   "http://example.com/test.jpg",
 		Width: 800,
 	}
-	input, err := input.Validate([]string{"example.com"})
+	input, err = input.Validate([]string{"example.com"})
 	i, err := storage.NewImage(input)
 	if err != nil {
 		return err

@@ -1,4 +1,4 @@
-package fetcher_test
+package fetcher
 
 import (
 	"fmt"
@@ -9,18 +9,27 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/syoya/resizer/fetcher"
+	"github.com/syoya/resizer/options"
 	"github.com/syoya/resizer/testutil"
+	"go.uber.org/zap"
 )
 
 var (
-	mockServer *httptest.Server
+	mockServer    *httptest.Server
+	testZapLogger *zap.Logger
 )
 
 func TestMain(m *testing.M) {
+	var err error
+
 	mockServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, testutil.DirFixtures)
 	}))
+
+	testZapLogger, err = zap.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
 
 	os.Exit(m.Run())
 }
@@ -38,9 +47,15 @@ func TestFetchAndClean(t *testing.T) {
 		t.Fatalf("fail to read response body: error=%v", err)
 	}
 
-	// fetcher.Fetchを実行し、戻り値のパスにファイルが存在していることをテストする
+	// Fetcherを生成
+	fe, err := NewFetcher(&options.Options{Logger: testZapLogger})
+	if err != nil {
+		t.Fatalf("failed to initialize Fetcher: error=%v", err)
+	}
+
+	// Fetcher#Fetchを実行し、戻り値のパスにファイルが存在していることをテストする
 	// 同一のデータが保存されていることをテストする
-	filename, err := fetcher.Fetch(url)
+	filename, err := fe.Fetch(url)
 	if err != nil {
 		t.Fatalf("fail to Fetch: error=%v", err)
 	}
@@ -52,8 +67,8 @@ func TestFetchAndClean(t *testing.T) {
 		t.Errorf("deferrent content between server file and local file")
 	}
 
-	// fetcher.Cleanを実行し、パスにファイルが存在していないことをテストする
-	if err := fetcher.Clean(filename); err != nil {
+	// Fetcher#Cleanを実行し、パスにファイルが存在していないことをテストする
+	if err := fe.Clean(filename); err != nil {
 		t.Fatalf("fail to clear: error=%v", err)
 	}
 	if _, err := os.Stat(filename); err == nil {

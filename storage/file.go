@@ -12,7 +12,9 @@ import (
 
 	uuid "github.com/satori/go.uuid"
 	"github.com/syoya/resizer/input"
+	"github.com/syoya/resizer/logger"
 	"github.com/syoya/resizer/options"
+	"go.uber.org/zap/zapcore"
 )
 
 type Image struct {
@@ -194,4 +196,29 @@ func (i Image) CreateFilename(o *options.Options) string {
 		ext = i.ValidatedFormat
 	}
 	return fmt.Sprintf("%s%s.%s", o.ObjectPrefix, id, ext)
+}
+
+// MarshalLogObject zap.Objectフィールド用関数
+func (i Image) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddUint64(logger.FieldKeyID, i.ID)
+
+	enc.AddString(logger.FieldKeyCreatedAt, i.CreatedAt.Format(time.RFC3339))
+	enc.AddString(logger.FieldKeyUpdatedAt, i.UpdatedAt.Format(time.RFC3339))
+	enc.AddString(logger.FieldKeyImageValidatedURL, i.ValidatedURL)
+	enc.AddString(logger.FieldKeyImageValidatedMethod, i.ValidatedMethod)
+	enc.AddString(logger.FieldKeyImageValidatedFormat, i.ValidatedFormat)
+	enc.AddInt(logger.FieldKeyImageValidatedWidth, i.ValidatedWidth)
+	enc.AddInt(logger.FieldKeyImageValidatedHeight, i.ValidatedHeight)
+	enc.AddInt(logger.FieldKeyImageValidatedQuality, i.ValidatedQuality)
+	enc.AddString(logger.FieldKeyImageValidatedHash, i.ValidatedHash)
+	enc.AddInt(logger.FieldKeyImageDestWidth, i.DestWidth)
+	enc.AddInt(logger.FieldKeyImageDestHeight, i.DestHeight)
+	enc.AddInt(logger.FieldKeyImageCanvasWidth, i.CanvasWidth)
+	enc.AddInt(logger.FieldKeyImageCanvasHeight, i.CanvasHeight)
+	enc.AddString(logger.FieldKeyImageNormalizedHash, i.NormalizedHash)
+	enc.AddString(logger.FieldKeyContentType, i.ContentType)
+	enc.AddString(logger.FieldKeyETag, i.ETag)
+	enc.AddString(logger.FieldKeyFilename, i.Filename)
+
+	return nil
 }

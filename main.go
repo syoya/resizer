@@ -4,21 +4,33 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/syoya/resizer/logger"
 	"github.com/syoya/resizer/options"
 	"github.com/syoya/resizer/server"
+	"go.uber.org/zap"
 )
 
-func main() {
-	if err := _main(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(2)
+func checkErr(err error) {
+	if err != nil {
+		panic(err)
 	}
 }
 
-func _main() error {
-	o := &options.Options{}
-	if err := o.Parse(os.Args[1:]); err != nil {
-		return err
-	}
-	return server.Start(o)
+func main() {
+	// 環境変数からオプションを生成する
+	o, err := options.NewOptions(os.Args[1:])
+	checkErr(err)
+	defer func() {
+		err = o.Logger.Sync()
+		if err != nil {
+			o = nil
+		}
+	}()
+
+	// サーバ始動
+	o.Logger.Named(logger.TagKeyServerStart).Info(
+		fmt.Sprintf("listening on port %d", o.Port),
+		zap.Int(logger.FieldKeyPort, o.Port),
+	)
+	checkErr(server.Start(o))
 }

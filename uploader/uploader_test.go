@@ -13,6 +13,7 @@ import (
 	"github.com/syoya/resizer/storage"
 	"github.com/syoya/resizer/testutil"
 	"github.com/syoya/resizer/uploader"
+	"go.uber.org/zap"
 )
 
 var (
@@ -30,8 +31,13 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	var err error
-	u, err = uploader.New(opts)
+	testZapLogger, err := zap.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
+	opts.Logger = testZapLogger
+
+	u, err = uploader.NewUploader(opts)
 	if err != nil {
 		panic(err)
 	}
@@ -42,7 +48,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestNew(t *testing.T) {
-	_, err := uploader.New(opts)
+	_, err := uploader.NewUploader(opts)
 	if err != nil {
 		t.Fatalf("fail to new: %v", err)
 	}

@@ -7,8 +7,10 @@ import (
 	"testing"
 
 	"github.com/syoya/resizer/input"
+	"github.com/syoya/resizer/options"
 	"github.com/syoya/resizer/processor"
 	"github.com/syoya/resizer/storage"
+	"go.uber.org/zap"
 )
 
 const (
@@ -107,9 +109,14 @@ func evalPixels(t *testing.T, path string, i image.Image, p image.Point, colors 
 }
 
 func eval(t *testing.T, path string, f storage.Image, size image.Point, colors []int) string {
+	testZapLogger, err := zap.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
+
 	var b []byte
 	w := bytes.NewBuffer(b)
-	p := processor.New()
+	p := processor.NewProcessor(&options.Options{Logger: testZapLogger})
 	f.ValidatedWidth *= u
 	f.ValidatedHeight *= u
 	pixels, err := p.Preprocess(path)

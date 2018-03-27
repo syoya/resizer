@@ -8,9 +8,9 @@ services:
       - mysql
     encrypted_env_file: secret.env.encrypted
     enviroment:
-      RESIZER_BUCKET: 'wakka-master'
+      RESIZER_BUCKET: 'test-syoya-resizer'
       RESIZER_DSN: 'root:@tcp(mysql:3306)/resizer?charset=utf8&parseTime=True'
-      RESIZER_HOST:  'master.wakka.io'
+      RESIZER_HOST:  'loremflickr.com,lorempixel.com,wakka-development.storage.googleapis.com,randomuser.me'
       RESIZER_PORT: '7000'
       RESIZER_PREFIX: 'resized/'
     command: sh test.sh

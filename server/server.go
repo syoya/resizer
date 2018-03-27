@@ -6,7 +6,6 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"time"
@@ -15,10 +14,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/syoya/resizer/fetcher"
 	"github.com/syoya/resizer/input"
+	"github.com/syoya/resizer/logger"
 	"github.com/syoya/resizer/options"
 	"github.com/syoya/resizer/processor"
 	"github.com/syoya/resizer/storage"
 	"github.com/syoya/resizer/uploader"
+	"go.uber.org/zap"
 	"golang.org/x/net/netutil"
 )
 
@@ -87,21 +88,21 @@ func Start(o *options.Options) error {
 		return err
 	}
 
-	log.Printf("listening on port %d", o.Port)
-
 	if o.MaxHTTPConnections > 0 {
 		listener = netutil.LimitListener(listener, o.MaxHTTPConnections)
 	}
 	if err := server.Serve(listener); err != nil {
 		return errors.Wrap(err, "fail to serve")
 	}
-	return nil
+
+	return handler.Storage.Close()
 }
 
 type Handler struct {
 	Options  *options.Options
 	Storage  *storage.Storage
 	Uploader *uploader.Uploader
+	Fetcher  *fetcher.Fetcher
 }
 
 func NewHandler(o *options.Options) (Handler, error) {
@@ -109,50 +110,96 @@ func NewHandler(o *options.Options) (Handler, error) {
 	if err != nil {
 		return Handler{}, err
 	}
-	u, err := uploader.New(o)
+	u, err := uploader.NewUploader(o)
 	if err != nil {
 		return Handler{}, err
 	}
+
+	fe, err := fetcher.NewFetcher(o)
+	if err != nil {
+		return Handler{}, err
+	}
+
 	return Handler{
 		Options:  o,
 		Storage:  s,
 		Uploader: u,
+		Fetcher:  fe,
 	}, nil
+}
+
+// logHTTPRequest HTTP Requestをロギングする
+// この場合はクライアントから受信したデータ
+func logHTTPRequest(l *zap.Logger, r *http.Request, requestID string) {
+	l.Named(logger.TagKeyHTTPRequest).Info(
+		"クライアントから受信した情報一覧",
+		zap.String(logger.FieldKeyRequestID, requestID),
+		zap.String(logger.FieldKeyHTTPMethod, r.Method),
+		zap.String(logger.FieldKeyURL, r.URL.String()),
+		zap.String(logger.FieldKeyHTTPProtocol, r.Proto),
+		zap.String(logger.FieldKeyHost, r.Header.Get("X-Forwarded-Host")),
+		zap.String(logger.FieldKeyUserAgent, r.Header.Get("User-Agent")),
+		zap.String(logger.FieldKeyContentType, r.Header.Get("Content-Type")),
+	)
+}
+
+// logHTTPResponse HTTP Responseをロギングする
+// この場合はクライアントへ送信するデータ
+func logHTTPResponse(l *zap.Logger, w http.ResponseWriter, statusCode int, requestID string) {
+	l.Named(logger.TagKeyHTTPResponse).Info(
+		"クライアントへ送信する情報一覧",
+		zap.String(logger.FieldKeyRequestID, requestID),
+		zap.String(logger.FieldKeyHTTPStatus, http.StatusText(statusCode)),
+		zap.Int(logger.FieldKeyHTTPStatusCode, statusCode),
+	)
 }
 
 // ServeHTTP はリクエストに応じて処理を行いレスポンスする。
 func (h *Handler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	if err := h.operate(resp, req); err != nil {
-		log.Println(errors.Wrap(err, "fail to operate"))
-		resp.WriteHeader(http.StatusBadRequest)
+	l := h.Options.Logger.Named(logger.TagKeyHandlerServeHTTP)
 
-		e := NewErrorHTML(http.StatusBadRequest, errors.Cause(err).Error())
+	requestID := req.Header.Get("X-Request-ID")
+
+	logHTTPRequest(h.Options.Logger, req, requestID)
+
+	statusCode, err := h.operate(resp, req)
+	if err != nil {
+		l.Error("failed to operate", zap.Error(err))
+		resp.WriteHeader(statusCode)
+
+		e := NewErrorHTML(statusCode, errors.Cause(err).Error())
 		err := errorHTMLTemplate.Execute(resp, e)
 		if err != nil {
-			log.Println(errors.Wrap(err, "fail to generate error html from template"))
+			l.Error("failed to generate error html from template", zap.Error(err))
 		}
 
 		return
 	}
 
-	log.Println("OK")
+	l.Debug("OK")
+	logHTTPResponse(h.Options.Logger, resp, statusCode, requestID)
 }
 
 // operate は手続き的に一連のリサイズ処理を行う。
 // エラーを画一的に扱うためにメソッドとして切り分けを行っている
-func (h *Handler) operate(resp http.ResponseWriter, req *http.Request) error {
+// 返り値
+// - HTTP Status Code
+// - error
+func (h *Handler) operate(resp http.ResponseWriter, req *http.Request) (int, error) {
+	l := h.Options.Logger.Named(logger.TagKeyHandlerOperate)
+
 	// 1. URLクエリからリクエストされているオプションを抽出する
 	input, err := input.New(req.URL.Query())
 	if err != nil {
-		return err
+		return http.StatusBadRequest, err
 	}
 	input, err = input.Validate(h.Options.AllowedHosts)
 	if err != nil {
-		return err
+		return http.StatusBadRequest, err
 	}
 	i, err := storage.NewImage(input)
 	if err != nil {
-		return err
+		return http.StatusBadRequest, err
 	}
 
 	// 3. バリデート済みオプションでリサイズをしたキャッシュがあるか調べる
@@ -166,33 +213,49 @@ func (h *Handler) operate(resp http.ResponseWriter, req *http.Request) error {
 		ValidatedFormat:  i.ValidatedFormat,
 		ValidatedQuality: i.ValidatedQuality,
 	}).First(&cache)
-	log.Printf("cache.ID=%d\n", cache.ID)
+
+	l.Debug(fmt.Sprintf("cache.ID=%d", cache.ID), zap.Uint64(logger.FieldKeyCacheImageID, cache.ID))
 	if cache.ID != 0 {
-		log.Printf("validated cache %+v exists, requested with %+v\n", cache, i)
+		l.Info(
+			"validated cache exists",
+			zap.Object(logger.FieldKeyCacheImageObject, cache),
+		)
 		url := h.Uploader.CreateURL(cache.Filename)
-		http.Redirect(resp, req, url, http.StatusFound)
-		return nil
+		statusCode := http.StatusFound
+		http.Redirect(resp, req, url, statusCode)
+		return statusCode, nil
 	}
-	log.Printf("validated cache doesn't exist, requested with %+v\n", i)
+
+	l.Info(
+		"validated cache doesn't exist",
+		zap.Object(logger.FieldKeyRequestImageObject, i),
+	)
 
 	// 5. 元画像を取得する
 	// 6. リサイズの前処理をする
-	filename, err := fetcher.Fetch(i.ValidatedURL)
-	fmt.Printf("URL: %s, Filename: %s\n", i.ValidatedURL, filename)
+	filename, err := h.Fetcher.Fetch(i.ValidatedURL)
+	l.Debug(
+		fmt.Sprintf("URL: %s, Filename: %s", i.ValidatedURL, filename),
+		zap.String(logger.FieldKeyURL, i.ValidatedURL),
+		zap.String(logger.FieldKeyFilename, filename),
+	)
 	defer func() {
-		if err := fetcher.Clean(filename); err != nil {
-			log.Printf("fail to clean fetched file: %s\n", filename)
+		if err := h.Fetcher.Clean(filename); err != nil {
+			l.Warn(
+				"fail to clean fetched file",
+				zap.String(logger.FieldKeyFilename, filename),
+			)
 		}
 	}()
 	if err != nil {
-		return err
+		return http.StatusBadRequest, err
 	}
 	var b []byte
 	buf := bytes.NewBuffer(b)
-	p := processor.New()
+	p := processor.NewProcessor(h.Options)
 	pixels, err := p.Preprocess(filename)
 	if err != nil {
-		return err
+		return http.StatusBadRequest, err
 	}
 
 	// 7. 正規化する
@@ -200,7 +263,7 @@ func (h *Handler) operate(resp http.ResponseWriter, req *http.Request) error {
 	// 9. あればリサイズ画像のURLにリダイレクトする
 	i, err = i.Normalize(pixels.Bounds().Size())
 	if err != nil {
-		return err
+		return http.StatusBadRequest, err
 	}
 	cache = storage.Image{}
 	h.Storage.Where(&storage.Image{
@@ -212,19 +275,26 @@ func (h *Handler) operate(resp http.ResponseWriter, req *http.Request) error {
 		ValidatedQuality: i.ValidatedQuality,
 	}).First(&cache)
 	if cache.ID != 0 {
-		log.Printf("normalized cache %+v exists, requested with %+v\n", cache, i)
+		l.Info(
+			"normalized cache exists",
+			zap.Object(logger.FieldKeyCacheImageObject, cache),
+		)
 		url := h.Uploader.CreateURL(cache.Filename)
-		http.Redirect(resp, req, url, http.StatusFound)
-		return nil
+		statusCode := http.StatusFound
+		http.Redirect(resp, req, url, statusCode)
+		return statusCode, nil
 	}
-	log.Printf("normalized cache doesn't exist, requested with %+v\n", i)
+	l.Info(
+		"normalized cache doesn't exist",
+		zap.Object(logger.FieldKeyRequestImageObject, i),
+	)
 
 	// 10. リサイズする
 	// 11. ファイルオブジェクトの処理結果フィールドを埋める
 	// 12. レスポンスする
 	size, err := p.Resize(pixels, buf, i)
 	if err != nil {
-		return err
+		return http.StatusBadRequest, err
 	}
 	b = buf.Bytes()
 
@@ -240,20 +310,22 @@ func (h *Handler) operate(resp http.ResponseWriter, req *http.Request) error {
 	// レスポンスを完了させるために非同期に処理する
 	go h.save(b, i)
 
-	return nil
+	return http.StatusOK, nil
 }
 
 // save はファイルやデータを保存します。
 func (h *Handler) save(b []byte, f storage.Image) {
+	l := h.Options.Logger.Named(logger.TagKeyHandlerSave)
+
 	// 13. アップロードする
 	// 14. キャッシュをDBに格納する
 	if _, err := h.Uploader.Upload(bytes.NewBuffer(b), f); err != nil {
-		log.Println(errors.Wrap(err, "fail to upload"))
+		l.Error("failed to upload", zap.Error(err))
 		return
 	}
 	h.Storage.NewRecord(f)
 	h.Storage.Create(&f)
 	h.Storage.Save(&f)
 
-	log.Println("complete to save")
+	l.Info("complete to save")
 }
