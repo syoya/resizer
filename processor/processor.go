@@ -11,7 +11,6 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
-	"log"
 	"os"
 	"sync"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/nfnt/resize"
 	"github.com/pkg/errors"
 	"github.com/syoya/resizer/input"
+	"github.com/syoya/resizer/logger"
 	"github.com/syoya/resizer/options"
 	"github.com/syoya/resizer/storage"
 	"go.uber.org/zap"
@@ -34,7 +34,7 @@ type Processor struct {
 
 func NewProcessor(o *options.Options) *Processor {
 	return &Processor{
-		l: o.Logger,
+		l: o.Logger.Named(logger.TagKeyFetcherProcessor),
 	}
 }
 
@@ -67,7 +67,7 @@ func (p *Processor) process(m *sync.Mutex, c chan Result, path string, w io.Writ
 // Preprocess load image and EXIF from file at filename.
 // When orientation tag exists in EXIF, orient pixels in
 // image.
-func (self *Processor) Preprocess(filename string) (image.Image, error) {
+func (p *Processor) Preprocess(filename string) (image.Image, error) {
 	src, err := os.Open(filename)
 	if err != nil {
 		return nil, err
@@ -99,10 +99,15 @@ func Load(filename string) (image.Image, string, error) {
 	return src, format, nil
 }
 
-// Process writes resized i to w with options in f.
+// Resize writes resized i to w with options in f.
 // Returns the size of resized i and any error occurred.
-func (self *Processor) Resize(i image.Image, w io.Writer, f storage.Image) (*image.Point, error) {
-	log.Printf("dest image: %+v\n", f)
+func (p *Processor) Resize(i image.Image, w io.Writer, f storage.Image) (*image.Point, error) {
+	l := p.l.Named(logger.TagKeyProcessorResize)
+
+	l.Debug(
+		"dest image",
+		zap.Object(logger.FieldKeyImageObject, f),
+	)
 
 	var ir image.Image
 	switch f.ValidatedMethod {

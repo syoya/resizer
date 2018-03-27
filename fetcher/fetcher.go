@@ -4,7 +4,6 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -12,78 +11,98 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/syoya/resizer/logger"
+	"github.com/syoya/resizer/options"
+	"go.uber.org/zap"
 )
 
 const (
+	// FIXME: ブラウザのUAではなく, このFetcherのUAを定義してあげる
 	UserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36"
 )
 
-var (
-	tempDir = path.Join(os.TempDir(), "resizer")
-	expires time.Duration
+type Fetcher struct {
+	l       *zap.Logger
+	workDir string
 	client  *http.Client
-)
-
-func init() {
-	if err := _init(); err != nil {
-		panic(err)
-	}
 }
 
-func _init() error {
-	var err error
-	expires, err = time.ParseDuration("1h")
-	if err != nil {
-		return err
-	}
+func NewFetcher(o *options.Options) (*Fetcher, error) {
+	tempDir := path.Join(os.TempDir(), "resizer")
 	if err := os.RemoveAll(tempDir); err != nil {
-		return err
+		return nil, err
 	}
 	if err := os.MkdirAll(tempDir, 0777); err != nil {
-		return err
+		return nil, err
 	}
 
-	client = new(http.Client)
-
-	return nil
+	return &Fetcher{
+		l:       o.Logger.Named(logger.TagKeyFetcher),
+		workDir: tempDir,
+		client:  new(http.Client),
+	}, nil
 }
 
-func Fetch(url string) (string, error) {
-	sum := md5.Sum([]byte(fmt.Sprintf("%s-%d", url, time.Now().UnixNano())))
-	f := fmt.Sprintf("%x", sum)
-	filename := path.Join(tempDir, f)
+func (self Fetcher) Fetch(url string) (string, error) {
+	l := self.l.Named(logger.TagKeyFetcherFetch)
 
-	log.Printf("file is temporary saved as %s\n", filename)
+	sum := md5.Sum([]byte(fmt.Sprintf("%s-%d", url, time.Now().UnixNano())))
+	filename := path.Join(self.workDir, fmt.Sprintf("%x", sum))
+
+	l.Info(
+		fmt.Sprintf("file is temporary saved as %s", filename),
+		zap.String(logger.FieldKeyFilename, filename),
+	)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return "", errors.Wrap(err, "fail to new request")
 	}
 	req.Header.Set("User-Agent", UserAgent)
-	resp, err := client.Do(req)
+	resp, err := self.client.Do(req)
 	if err != nil {
 		return "", errors.Wrap(err, "fail to GET")
 	}
 
 	dump, _ := httputil.DumpRequest(req, true)
 
-	log.Printf("Dump: %s\n", dump)
+	l.Debug(
+		"dump",
+		zap.Binary(logger.FieldKeyBinaryBase64, dump),
+	)
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("not ok: StatusCode=%d\n", resp.StatusCode)
-		return "", fmt.Errorf("can't fetch image %s", url)
+		err = fmt.Errorf("can't fetch image %s", url)
+		l.Error(
+			"HTTP Response Status is not ok",
+			zap.Error(err),
+			zap.Int(logger.FieldKeyHTTPStatusCode, resp.StatusCode),
+			zap.String(logger.FieldKeyURL, url),
+		)
+		return "", err
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Println(errors.Wrap(err, "fail to close response body"))
+			l.Error(
+				"fail to close response body",
+				zap.Error(err),
+			)
 		}
 	}()
-	log.Printf("ok: StatusCode=%d\n", resp.StatusCode)
+	l.Info(
+		"HTTP Response Status is ok",
+		zap.Int(logger.FieldKeyHTTPStatusCode, resp.StatusCode),
+		zap.String(logger.FieldKeyURL, url),
+	)
 
 	file, err := os.Create(filename)
 	defer func() {
 		if err := file.Close(); err != nil {
-			log.Println(errors.Wrap(err, "fail to close file"))
+			l.Error(
+				"failed to close file",
+				zap.Error(err),
+				zap.String(logger.FieldKeyFilename, filename),
+			)
 		}
 	}()
 	if err != nil {
@@ -96,6 +115,6 @@ func Fetch(url string) (string, error) {
 	return filename, nil
 }
 
-func Clean(filename string) error {
+func (self Fetcher) Clean(filename string) error {
 	return os.Remove(filename)
 }

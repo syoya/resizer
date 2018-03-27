@@ -17,15 +17,24 @@ import (
 	"github.com/syoya/resizer/options"
 	"github.com/syoya/resizer/server"
 	"github.com/syoya/resizer/testutil"
+	"go.uber.org/zap"
 )
 
 var (
 	appServer      *httptest.Server
 	fixturesServer *httptest.Server
+	testZapLogger  *zap.Logger
 )
 
 func TestMain(m *testing.M) {
-	if err := testutil.CreateGoogleAuthFile(); err != nil {
+	var err error
+
+	if err = testutil.CreateGoogleAuthFile(); err != nil {
+		panic(err)
+	}
+
+	testZapLogger, err = zap.NewDevelopment()
+	if err != nil {
 		panic(err)
 	}
 
@@ -43,6 +52,7 @@ func TestMain(m *testing.M) {
 		},
 		DataSourceName: "root:@tcp(mysql:3306)/resizer?charset=utf8&parseTime=True",
 		AllowedHosts:   []string{u.Host},
+		Logger:         testZapLogger,
 	})
 	if err != nil {
 		panic(err)

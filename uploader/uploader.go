@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 
 	gcs "cloud.google.com/go/storage"
 	"github.com/pkg/errors"
+	"github.com/syoya/resizer/logger"
 	"github.com/syoya/resizer/options"
 	"github.com/syoya/resizer/storage"
+	"go.uber.org/zap"
 	"golang.org/x/net/context"
 	opt "google.golang.org/api/option"
 )
@@ -23,10 +24,11 @@ type Uploader struct {
 	context    context.Context
 	bucket     *gcs.BucketHandle
 	bucketName string
+	l          *zap.Logger
 }
 
 // New はアップローダーを作成する。
-func New(o *options.Options) (*Uploader, error) {
+func NewUploader(o *options.Options) (*Uploader, error) {
 	ctx := context.Background()
 	client, err := gcs.NewClient(ctx, opt.WithScopes(gcs.ScopeFullControl), opt.WithServiceAccountFile(o.ServiceAccount.Path))
 	if err != nil {
@@ -36,10 +38,13 @@ func New(o *options.Options) (*Uploader, error) {
 		context:    ctx,
 		bucket:     client.Bucket(o.Bucket),
 		bucketName: o.Bucket,
+		l:          o.Logger.Named(logger.TagKeyFetcherUploader),
 	}, nil
 }
 
 func (u *Uploader) Upload(buf *bytes.Buffer, f storage.Image) (string, error) {
+	l := u.l.Named(logger.TagKeyUploaderUpload)
+
 	object := u.bucket.Object(f.Filename)
 	w := object.NewWriter(u.context)
 	written, err := io.Copy(w, buf)
@@ -50,7 +55,12 @@ func (u *Uploader) Upload(buf *bytes.Buffer, f storage.Image) (string, error) {
 		return "", errors.Wrap(err, "can't close object writer")
 	}
 
-	log.Printf("Write %d bytes object '%s' in bucket '%s'\n", written, f.Filename, u.bucketName)
+	l.Info(
+		fmt.Sprintf("Write %d bytes object", written),
+		zap.Int64(logger.FieldKeySizeBytes, written),
+		zap.String(logger.FieldKeyFilename, f.Filename),
+		zap.String(logger.FieldKeyBucket, u.bucketName),
+	)
 
 	attrs, err := object.Update(u.context, gcs.ObjectAttrsToUpdate{
 		ContentType:  f.ContentType,
@@ -60,7 +70,9 @@ func (u *Uploader) Upload(buf *bytes.Buffer, f storage.Image) (string, error) {
 		return "", errors.Wrap(err, "can't update object attributes")
 	}
 
-	log.Printf("Attributes: %+v\n", *attrs)
+	l.Debug(
+		fmt.Sprintf("Attributes: %+v", *attrs),
+	)
 
 	url := u.CreateURL(f.Filename)
 	return url, nil

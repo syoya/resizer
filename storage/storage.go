@@ -1,17 +1,18 @@
 package storage
 
 import (
-	"log"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
-	"github.com/pkg/errors"
+	"github.com/syoya/resizer/logger"
 	"github.com/syoya/resizer/options"
+	"go.uber.org/zap"
 )
 
 type Storage struct {
 	*gorm.DB
+	l *zap.Logger
 }
 
 func New(o *options.Options) (*Storage, error) {
@@ -22,7 +23,7 @@ func New(o *options.Options) (*Storage, error) {
 		if err == nil {
 			break
 		}
-		log.Println(errors.Wrap(err, "wait for connection"))
+		o.Logger.Named(logger.TagKeyDatabaseInitializing).Warn("wait for connection", zap.Error(err))
 		time.Sleep(time.Second)
 	}
 	db.LogMode(false)
@@ -39,13 +40,14 @@ func New(o *options.Options) (*Storage, error) {
 		if err == nil {
 			break
 		}
-		log.Println(errors.Wrap(err, "wait for communication"))
+		o.Logger.Named(logger.TagKeyDatabaseInitializing).Warn("wait for communication", zap.Error(err))
 		time.Sleep(time.Second)
 	}
 
-	return &Storage{db}, nil
+	return &Storage{db, o.Logger.Named(logger.TagKeyFetcherStorage)}, nil
 }
 
-func (self *Storage) Close() error {
-	return self.DB.DB().Close()
+// Close close db
+func (s *Storage) Close() error {
+	return s.DB.DB().Close()
 }
