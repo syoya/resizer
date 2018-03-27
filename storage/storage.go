@@ -46,7 +46,7 @@ func New(o *options.Options) (*Storage, error) {
 	}
 
 	dblogger.Info("connected to database", zap.String(logger.FieldKeyDBDataSourceName, o.DataSourceName))
-	return &Storage{db, o.Logger.Named(logger.TagKeyFetcherStorage)}, nil
+	return &Storage{db, o.Logger.Named(logger.TagKeyStorage)}, nil
 }
 
 // Close close db

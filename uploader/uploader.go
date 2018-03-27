@@ -38,7 +38,7 @@ func NewUploader(o *options.Options) (*Uploader, error) {
 		context:    ctx,
 		bucket:     client.Bucket(o.Bucket),
 		bucketName: o.Bucket,
-		l:          o.Logger.Named(logger.TagKeyFetcherUploader),
+		l:          o.Logger.Named(logger.TagKeyUploader),
 	}, nil
 }
 
