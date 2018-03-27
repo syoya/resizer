@@ -6,6 +6,9 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/hnakamur/zap-ltsv"
+	"go.uber.org/zap"
 )
 
 const (
@@ -62,6 +65,11 @@ func init() {
 	for i, env := range Envs {
 		EnvFlagMap[env] = Flags[i]
 	}
+
+	err := ltsv.RegisterLTSVEncoder()
+	if err != nil {
+		panic(err)
+	}
 }
 
 type Options struct {
@@ -74,9 +82,41 @@ type Options struct {
 	ObjectPrefix       string
 	Verbose            bool
 	Enviroment         string
+
+	Logger *zap.Logger
 }
 
-func (o *Options) Parse(args []string) error {
+// NewOptions Initialize Options
+// - args command line arguments
+func NewOptions(args []string) (*Options, error) {
+	var err error
+
+	o := &Options{}
+	err = o.parse(args)
+	if err != nil {
+		return nil, err
+	}
+
+	// Initialize Logger
+	var zapConfig zap.Config
+	var zapLogger *zap.Logger
+	switch o.Enviroment {
+	case "test":
+	case "development":
+		zapConfig = ltsv.NewDevelopmentConfig()
+	default:
+		zapConfig = ltsv.NewProductionConfig()
+	}
+	zapLogger, err = zapConfig.Build()
+	if err != nil {
+		return nil, err
+	}
+	o.Logger = zapLogger
+
+	return o, nil
+}
+
+func (o *Options) parse(args []string) error {
 	if v := os.Getenv(EnvGoogleAuthJSON); v != "" {
 		b := []byte(v)
 		if err := json.Unmarshal(b, &o.ServiceAccount); err != nil {

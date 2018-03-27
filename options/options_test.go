@@ -1,24 +1,22 @@
-package options_test
+package options
 
 import (
 	"os"
 	"reflect"
 	"testing"
-
-	"github.com/syoya/resizer/options"
 )
 
 func TestOptions(t *testing.T) {
-	if j := os.Getenv(options.EnvGoogleAuthJSON); j != "" {
-		os.Unsetenv(options.EnvGoogleAuthJSON)
-		defer os.Setenv(options.EnvGoogleAuthJSON, j)
+	if j := os.Getenv(EnvGoogleAuthJSON); j != "" {
+		os.Unsetenv(EnvGoogleAuthJSON)
+		defer os.Setenv(EnvGoogleAuthJSON, j)
 	}
 
 	for _, c := range []struct {
 		name string
 		envs map[string]string
 		args []string
-		want *options.Options
+		want *Options
 	}{
 		{
 			"multiple hosts with comma separated",
@@ -26,7 +24,7 @@ func TestOptions(t *testing.T) {
 			[]string{
 				"-host", "a.com,b.com",
 			},
-			&options.Options{
+			&Options{
 				AllowedHosts: []string{
 					"a.com",
 					"b.com",
@@ -42,7 +40,7 @@ func TestOptions(t *testing.T) {
 				"-host", "a.com",
 				"-host", "b.com",
 			},
-			&options.Options{
+			&Options{
 				AllowedHosts: []string{
 					"a.com",
 					"b.com",
@@ -58,7 +56,7 @@ func TestOptions(t *testing.T) {
 				"-host", "a.com,b.com",
 				"-host", "c.com",
 			},
-			&options.Options{
+			&Options{
 				AllowedHosts: []string{
 					"a.com",
 					"b.com",
@@ -71,10 +69,10 @@ func TestOptions(t *testing.T) {
 		{
 			"only env",
 			map[string]string{
-				options.EnvBucket: "foo",
+				EnvBucket: "foo",
 			},
 			[]string{},
-			&options.Options{
+			&Options{
 				Bucket:     "foo",
 				Port:       80,
 				Enviroment: "production",
@@ -86,7 +84,7 @@ func TestOptions(t *testing.T) {
 			[]string{
 				"-bucket", "bar",
 			},
-			&options.Options{
+			&Options{
 				Bucket:     "bar",
 				Port:       80,
 				Enviroment: "production",
@@ -95,12 +93,12 @@ func TestOptions(t *testing.T) {
 		{
 			"envs and args",
 			map[string]string{
-				options.EnvBucket: "foo",
+				EnvBucket: "foo",
 			},
 			[]string{
 				"-bucket", "bar",
 			},
-			&options.Options{
+			&Options{
 				Bucket:     "bar",
 				Port:       80,
 				Enviroment: "production",
@@ -108,20 +106,20 @@ func TestOptions(t *testing.T) {
 		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			got := &options.Options{}
+			got := &Options{}
 
-			for _, k := range options.Envs {
+			for _, k := range Envs {
 				os.Setenv(k, "")
 			}
 			for k, v := range c.envs {
 				os.Setenv(k, v)
 			}
-			if err := got.Parse(c.args); err != nil {
+			if err := got.parse(c.args); err != nil {
 				t.Fatal(err)
 			}
 			if !reflect.DeepEqual(got, c.want) {
 				t.Error("ENVS:")
-				for _, k := range options.Envs {
+				for _, k := range Envs {
 					t.Errorf("%s: %s\n", k, os.Getenv(k))
 				}
 				t.Errorf("\ngot:\n%+v\nwant:\n%+v", got, c.want)

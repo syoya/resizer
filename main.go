@@ -1,24 +1,23 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/syoya/resizer/options"
 	"github.com/syoya/resizer/server"
 )
 
-func main() {
-	if err := _main(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(2)
+func checkErr(err error) {
+	if err != nil {
+		panic(err)
 	}
 }
 
-func _main() error {
-	o := &options.Options{}
-	if err := o.Parse(os.Args[1:]); err != nil {
-		return err
-	}
-	return server.Start(o)
+func main() {
+	// 環境変数からオプションを生成する
+	o, err := options.NewOptions(os.Args[1:])
+	checkErr(err)
+
+	// サーバ始動
+	checkErr(server.Start(o))
 }
