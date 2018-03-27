@@ -16,6 +16,7 @@ type Storage struct {
 }
 
 func New(o *options.Options) (*Storage, error) {
+	dblogger := o.Logger.Named(logger.TagKeyDatabaseInitializing)
 	var db *gorm.DB
 	for {
 		var err error
@@ -23,7 +24,7 @@ func New(o *options.Options) (*Storage, error) {
 		if err == nil {
 			break
 		}
-		o.Logger.Named(logger.TagKeyDatabaseInitializing).Warn("wait for connection", zap.Error(err))
+		dblogger.Warn("wait for connection", zap.Error(err))
 		time.Sleep(time.Second)
 	}
 	db.LogMode(false)
@@ -40,10 +41,11 @@ func New(o *options.Options) (*Storage, error) {
 		if err == nil {
 			break
 		}
-		o.Logger.Named(logger.TagKeyDatabaseInitializing).Warn("wait for communication", zap.Error(err))
+		dblogger.Warn("wait for communication", zap.Error(err))
 		time.Sleep(time.Second)
 	}
 
+	dblogger.Info("connected to database", zap.String(logger.FieldKeyDBDataSourceName, o.DataSourceName))
 	return &Storage{db, o.Logger.Named(logger.TagKeyFetcherStorage)}, nil
 }
 
