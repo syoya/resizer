@@ -9,9 +9,11 @@ services:
     env_file: secret.env
     volumes:
       - .:/go/src/github.com/syoya/resizer
+    volumes_from:
+      - mysql
     environment:
-      RESIZER_BUCKET: 'wakka-development'
-      RESIZER_DSN: 'root:@unix(/var/run/mysqld/mysqld.sock)/wakka_resizer?charset=utf8&parseTime=True'
+      RESIZER_BUCKET: 'test-syoya-resizer'
+      RESIZER_DSN: 'root:@unix(/var/run/mysqld/mysqld.sock)/resizer?charset=utf8&parseTime=True'
       RESIZER_HOST:  'loremflickr.com,lorempixel.com,wakka-development.storage.googleapis.com,randomuser.me'
       RESIZER_PORT: '7000'
       RESIZER_PREFIX: 'resized/'
@@ -23,3 +25,5 @@ services:
     environment:
       MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
       MYSQL_DATABASE: 'resizer'
+    volumes:
+      - /var/run/mysqld
