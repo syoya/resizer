@@ -201,8 +201,9 @@ func (i Image) CreateFilename(o *options.Options) string {
 // MarshalLogObject zap.Objectフィールド用関数
 func (i Image) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddUint64(logger.FieldKeyID, i.ID)
-	enc.AddTime(logger.FieldKeyCreatedAt, i.CreatedAt)
-	enc.AddTime(logger.FieldKeyUpdatedAt, i.UpdatedAt)
+
+	enc.AddString(logger.FieldKeyCreatedAt, i.CreatedAt.Format(time.RFC3339))
+	enc.AddString(logger.FieldKeyUpdatedAt, i.UpdatedAt.Format(time.RFC3339))
 	enc.AddString(logger.FieldKeyImageValidatedURL, i.ValidatedURL)
 	enc.AddString(logger.FieldKeyImageValidatedMethod, i.ValidatedMethod)
 	enc.AddString(logger.FieldKeyImageValidatedFormat, i.ValidatedFormat)
