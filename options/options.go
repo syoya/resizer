@@ -7,8 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hnakamur/zap-ltsv"
+	"github.com/pkg/errors"
+	stackdriver "github.com/tommy351/zap-stackdriver"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -65,11 +67,6 @@ func init() {
 	for i, env := range Envs {
 		EnvFlagMap[env] = Flags[i]
 	}
-
-	err := ltsv.RegisterLTSVEncoder()
-	if err != nil {
-		panic(err)
-	}
 }
 
 type Options struct {
@@ -97,20 +94,34 @@ func NewOptions(args []string) (*Options, error) {
 	}
 
 	// Initialize Logger
-	var zapConfig zap.Config
-	var zapLogger *zap.Logger
+	var loggerConfig zap.Config
 	switch o.Enviroment {
 	case "test":
 	case "development":
-		zapConfig = ltsv.NewDevelopmentConfig()
+		loggerConfig = zap.NewDevelopmentConfig()
 	default:
-		zapConfig = ltsv.NewProductionConfig()
+		loggerConfig = zap.NewProductionConfig()
 	}
-	zapLogger, err = zapConfig.Build()
+	loggerConfig.Level = zap.NewAtomicLevelAt(zapcore.InfoLevel)
+	loggerConfig.EncoderConfig = stackdriver.EncoderConfig
+	loggerConfig.OutputPaths = []string{"stdout"}
+	loggerConfig.ErrorOutputPaths = []string{"stderr"}
+	l, err := loggerConfig.Build(
+		zap.WrapCore(func(core zapcore.Core) zapcore.Core {
+			return &stackdriver.Core{Core: core}
+		}),
+		zap.Fields(
+			stackdriver.LogServiceContext(&stackdriver.ServiceContext{
+				Service: "resizer",
+				Version: "latest", // TODO: define resizer internal version
+			}),
+		),
+	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failure to initialize logger")
 	}
-	o.Logger = zapLogger
+
+	o.Logger = l
 
 	return o, nil
 }
